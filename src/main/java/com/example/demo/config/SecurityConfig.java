@@ -1,5 +1,8 @@
 package com.example.demo.config;
 
+import com.example.demo.security.FederatedIdentityAuthenticationSuccessHandler;
+import com.example.demo.security.FederatedIdentityIdTokenCustomizer;
+import com.example.demo.security.UserRepositoryOAuth2UserHandler;
 import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.jwk.source.ImmutableJWKSet;
@@ -16,8 +19,6 @@ import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
-import org.springframework.security.oauth2.core.ClientAuthenticationMethod;
-import org.springframework.security.oauth2.core.oidc.OidcScopes;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.server.authorization.client.InMemoryRegisteredClientRepository;
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClient;
@@ -25,7 +26,8 @@ import org.springframework.security.oauth2.server.authorization.client.Registere
 import org.springframework.security.oauth2.server.authorization.config.annotation.web.configuration.OAuth2AuthorizationServerConfiguration;
 import org.springframework.security.oauth2.server.authorization.config.annotation.web.configurers.OAuth2AuthorizationServerConfigurer;
 import org.springframework.security.oauth2.server.authorization.settings.AuthorizationServerSettings;
-import org.springframework.security.oauth2.server.authorization.settings.ClientSettings;
+import org.springframework.security.oauth2.server.authorization.token.JwtEncodingContext;
+import org.springframework.security.oauth2.server.authorization.token.OAuth2TokenCustomizer;
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
@@ -51,59 +53,35 @@ import java.util.UUID;
 @EnableWebSecurity
 public class SecurityConfig {
 
-//    /**
-//     * A Spring Security filter chain for the Protocol Endpoints.
-//     */
-//    @Bean
-//    @Order(1)
-//    public SecurityFilterChain authorizationServerSecurityFilterChain(HttpSecurity http)
-//            throws Exception {
-//        OAuth2AuthorizationServerConfiguration.applyDefaultSecurity(http);
-//        http.getConfigurer(OAuth2AuthorizationServerConfigurer.class)
-//                .oidc(Customizer.withDefaults());    // Enable OpenID Connect 1.0
-//        http
-//                // Redirect to the login page when not authenticated from the
-//                // authorization endpoint
-//                .exceptionHandling((exceptions) -> exceptions
-//                        .defaultAuthenticationEntryPointFor(
-//                                new LoginUrlAuthenticationEntryPoint("/login"),
-//                                new MediaTypeRequestMatcher(MediaType.TEXT_HTML)
-//                        )
-//                )
-//                // Accept access tokens for User Info and/or Client Registration
-//                .oauth2ResourceServer((resourceServer) -> resourceServer
-//                        .jwt(Customizer.withDefaults()));
-//
-//        return http.build();
-//    }
-//
-//    /**
-//     * A Spring Security filter chain for authentication.
-//     */
-//    @Bean
-//    @Order(2)
-//    public SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http)
-//            throws Exception {
-//        http
-//                .authorizeHttpRequests((authorize) -> authorize
-//                        .anyRequest().authenticated()
-//                )
-//                // Form login handles the redirect to the login page from the
-//                // authorization server filter chain
-//                .formLogin(Customizer.withDefaults());
-//
-//        return http.build();
-//    }
+    private final FederatedIdentityAuthenticationSuccessHandler authenticationSuccessHandler;
+    private final UserRepositoryOAuth2UserHandler userRepositoryOAuth2UserHandler;
 
+    public SecurityConfig(FederatedIdentityAuthenticationSuccessHandler authenticationSuccessHandler, UserRepositoryOAuth2UserHandler userRepositoryOAuth2UserHandler) {
+        this.authenticationSuccessHandler = authenticationSuccessHandler;
+        this.userRepositoryOAuth2UserHandler = userRepositoryOAuth2UserHandler;
+    }
+
+    /**
+     * OAuth2 Token 定制器
+     *
+     * @return OAuth2 Token 定制器实例
+     */
+    @Bean
+    public OAuth2TokenCustomizer<JwtEncodingContext> idTokenCustomizer() {
+        return new FederatedIdentityIdTokenCustomizer();
+    }
 
     // region 社交登录配置
+
     @Bean
     @Order(1)
     public SecurityFilterChain authorizationServerSecurityFilterChain(HttpSecurity http)
             throws Exception {
+
         OAuth2AuthorizationServerConfiguration.applyDefaultSecurity(http);
         http.getConfigurer(OAuth2AuthorizationServerConfigurer.class)
                 .oidc(Customizer.withDefaults());    // Enable OpenID Connect 1.0
+
         http
                 // Redirect to the OAuth 2.0 Login endpoint when not authenticated
                 // from the authorization endpoint
@@ -129,10 +107,15 @@ public class SecurityConfig {
                 )
                 // OAuth2 Login handles the redirect to the OAuth 2.0 Login endpoint
                 // from the authorization server filter chain
-                .oauth2Login(Customizer.withDefaults());
+                .oauth2Login(oauth2Login -> {
+                    // 认证成功后回调处理，eg：保存第一次登录的用户信息。
+                    authenticationSuccessHandler.setOAuth2UserHandler(userRepositoryOAuth2UserHandler);
+                    oauth2Login.successHandler(authenticationSuccessHandler);
+                });
 
         return http.build();
     }
+
     // endregion
 
     /**
@@ -154,20 +137,28 @@ public class SecurityConfig {
      */
     @Bean
     public RegisteredClientRepository registeredClientRepository() {
-        RegisteredClient oidcClient = RegisteredClient.withId(UUID.randomUUID().toString())
-                .clientId("oidc-client")
+//        RegisteredClient oidcClient = RegisteredClient.withId(UUID.randomUUID().toString())
+//                .clientId("oidc-client")
+//                .clientSecret("{noop}secret")
+//                .clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_BASIC)
+//                .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
+//                .authorizationGrantType(AuthorizationGrantType.REFRESH_TOKEN)
+//                .redirectUri("http://127.0.0.1:8080/login/oauth2/code/oidc-client")
+//                .postLogoutRedirectUri("http://127.0.0.1:8080/")
+//                .scope(OidcScopes.OPENID)
+//                .scope(OidcScopes.PROFILE)
+//                .clientSettings(ClientSettings.builder().requireAuthorizationConsent(true).build())
+//                .build();
+
+        var publicClient = RegisteredClient.withId(UUID.randomUUID().toString())
+                .clientId("public-client")
                 .clientSecret("{noop}secret")
-                .clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_BASIC)
                 .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
-                .authorizationGrantType(AuthorizationGrantType.REFRESH_TOKEN)
-                .redirectUri("http://127.0.0.1:8080/login/oauth2/code/oidc-client")
-                .postLogoutRedirectUri("http://127.0.0.1:8080/")
-                .scope(OidcScopes.OPENID)
-                .scope(OidcScopes.PROFILE)
-                .clientSettings(ClientSettings.builder().requireAuthorizationConsent(true).build())
+                .authorizationGrantType(AuthorizationGrantType.CLIENT_CREDENTIALS)
+                .redirectUri("http://locahost:9000")
                 .build();
 
-        return new InMemoryRegisteredClientRepository(oidcClient);
+        return new InMemoryRegisteredClientRepository(publicClient);
     }
 
     /**
@@ -217,40 +208,4 @@ public class SecurityConfig {
         return AuthorizationServerSettings.builder().build();
     }
 
-//    @Bean //1)
-//    @Order(1)
-//    public SecurityFilterChain authorizationServerSecurityFilterChain(HttpSecurity http)
-//            throws Exception {
-//        OAuth2AuthorizationServerConfiguration.applyDefaultSecurity(http);
-//        http.getConfigurer(OAuth2AuthorizationServerConfigurer.class)
-//                .oidc(Customizer.withDefaults());    // Enable OpenID Connect 1.0
-//        http
-//                // Redirect to the OAuth 2.0 Login endpoint when not authenticated
-//                // from the authorization endpoint
-//                .exceptionHandling((exceptions) -> exceptions
-//                        .defaultAuthenticationEntryPointFor(//2)
-//                                new LoginUrlAuthenticationEntryPoint("/oauth2/authorization/google"),
-//                                new MediaTypeRequestMatcher(MediaType.TEXT_HTML)
-//                        )
-//                )
-//                // Accept access tokens for User Info and/or Client Registration
-//                .oauth2ResourceServer((oauth2) -> oauth2.jwt(Customizer.withDefaults()));
-//
-//        return http.build();
-//    }
-//
-//    @Bean//3)
-//    @Order(2)
-//    public SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http)
-//            throws Exception {
-//        http
-//                .authorizeHttpRequests((authorize) -> authorize
-//                        .anyRequest().authenticated()
-//                )
-//                // OAuth2 Login handles the redirect to the OAuth 2.0 Login endpoint
-//                // from the authorization server filter chain
-//                .oauth2Login(Customizer.withDefaults());//4)
-//
-//        return http.build();
-//    }
 }
