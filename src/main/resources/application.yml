@@ -1,0 +1,56 @@
+spring:
+  security:
+    oauth2:
+      authorizationserver:
+        client:
+          oidc-client:
+            registration:
+              client-id: "oidc-client"
+              client-secret: "{noop}secret"
+              client-authentication-methods:
+                - "client_secret_basic"
+              authorization-grant-types:
+                - "authorization_code"
+                - "refresh_token"
+              redirect-uris:
+                - "http://127.0.0.1:8080/login/oauth2/code/oidc-client"
+              post-logout-redirect-uris:
+                - "http://127.0.0.1:8080/"
+              scopes:
+                - "openid"
+                - "profile"
+            require-authorization-consent: true
+      client:
+        registration:
+          google:
+            provider: google
+            client-id: 381022810268-qbmnvc3i9vsbb6kavmndp3dltg9ctbac.apps.googleusercontent.com
+            client-secret: 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
+            scope:
+              - email
+              - profile
+          facebook:
+            client-id: 193682297034900
+            client-secret: 9bfc16e6cb38af37ac10f34656a21269
+            scope:
+              - email
+              - public_profile
+          github:
+            client-id: 5e1bb9839c983502a974
+            client-secret: 44a75ffc25c1d44e5f30806e647cc9000bf6de16
+            scope:
+              - read:user
+              - user:email
+        provider:
+          google:
+            authorization-uri: https://accounts.google.com/o/oauth2/v2/auth
+            token-uri: https://oauth2.googleapis.com/token
+            user-info-uri: https://openidconnect.googleapis.com/v1/userinfo
+            jwk-set-uri: https://www.googleapis.com/oauth2/v3/certs
+            user-name-attribute: sub
+server:
+  port: 9000
+
+logging:
+  level:
+    org.springframework.security: trace
