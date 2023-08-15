@@ -104,11 +104,11 @@ public class SecurityConfig {
                 .oidc(Customizer.withDefaults());
         http.cors(Customizer.withDefaults());
         http
-                // Redirect to the OAuth 2.0 Login endpoint when not authenticated
-                // from the authorization endpoint
+                // Redirect to the login page when not authenticated from the
+                // authorization endpoint
                 .exceptionHandling((exceptions) -> exceptions
                         .defaultAuthenticationEntryPointFor(
-                                new LoginUrlAuthenticationEntryPoint("/oauth2/authorization/my-client"),
+                                new LoginUrlAuthenticationEntryPoint("/login"),
                                 new MediaTypeRequestMatcher(MediaType.TEXT_HTML)
                         )
                 )
@@ -148,7 +148,7 @@ public class SecurityConfig {
     @Bean
     public UserDetailsService userDetailsService() {
         UserDetails userDetails = User.withDefaultPasswordEncoder()
-                .username("user")
+                .username("user1")
                 .password("password")
                 .roles("USER")
                 .build();
@@ -181,6 +181,7 @@ public class SecurityConfig {
                 .authorizationGrantType(AuthorizationGrantType.CLIENT_CREDENTIALS)
                 .scope(OidcScopes.OPENID)
                 .scope(OidcScopes.PROFILE)
+                .postLogoutRedirectUri("http://127.0.0.1:4200")
                 .redirectUri("http://127.0.0.1:4200")
                 .redirectUri("http://127.0.0.1:4200/auth/callback")
                 .clientAuthenticationMethod(ClientAuthenticationMethod.NONE)
