@@ -40,7 +40,8 @@ public class FederatedIdentityAuthenticationSuccessHandler implements Authentica
                 this.oauth2UserHandler.accept(user);
                 // 1. 认证成功后,可以在这里重定向页面
                 // 2. TODO: 获取 Jwt Token 用于登录或注册
-                response.sendRedirect("/account-validations?username=" + user.getName());
+                // response.sendRedirect("/account-validations?username=" + user.getName());
+                // return;
             }
         }
         this.delegate.onAuthenticationSuccess(request, response, authentication);

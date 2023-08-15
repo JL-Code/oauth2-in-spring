@@ -30,6 +30,7 @@ import org.springframework.security.oauth2.server.authorization.config.annotatio
 import org.springframework.security.oauth2.server.authorization.config.annotation.web.configurers.OAuth2AuthorizationServerConfigurer;
 import org.springframework.security.oauth2.server.authorization.settings.AuthorizationServerSettings;
 import org.springframework.security.oauth2.server.authorization.settings.ClientSettings;
+import org.springframework.security.oauth2.server.authorization.settings.TokenSettings;
 import org.springframework.security.oauth2.server.authorization.token.JwtEncodingContext;
 import org.springframework.security.oauth2.server.authorization.token.OAuth2TokenCustomizer;
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
@@ -44,6 +45,9 @@ import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
+import java.time.Duration;
+import java.time.temporal.ChronoUnit;
+import java.time.temporal.TemporalUnit;
 import java.util.UUID;
 
 /**
@@ -134,6 +138,10 @@ public class SecurityConfig {
                     // 认证成功后回调处理，eg：保存第一次登录的用户信息。
                     authenticationSuccessHandler.setOAuth2UserHandler(userRepositoryOAuth2UserHandler);
                     oauth2Login.successHandler(authenticationSuccessHandler);
+                })
+                .oauth2ResourceServer(oauth2ResourceServer -> {
+                    // Add BearerTokenAuthenticationFilter
+                    oauth2ResourceServer.jwt(Customizer.withDefaults());
                 });
         http.csrf(AbstractHttpConfigurer::disable);
 
@@ -161,19 +169,6 @@ public class SecurityConfig {
      */
     @Bean
     public RegisteredClientRepository registeredClientRepository() {
-//        RegisteredClient oidcClient = RegisteredClient.withId(UUID.randomUUID().toString())
-//                .clientId("oidc-client")
-//                .clientSecret("{noop}secret")
-//                .clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_BASIC)
-//                .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
-//                .authorizationGrantType(AuthorizationGrantType.REFRESH_TOKEN)
-//                .redirectUri("http://127.0.0.1:8080/login/oauth2/code/oidc-client")
-//                .postLogoutRedirectUri("http://127.0.0.1:8080/")
-//                .scope(OidcScopes.OPENID)
-//                .scope(OidcScopes.PROFILE)
-//                .clientSettings(ClientSettings.builder().requireAuthorizationConsent(true).build())
-//                .build();
-
         var publicClient = RegisteredClient.withId(UUID.randomUUID().toString())
                 .clientId("public-client")
                 .clientSecret("{noop}secret")
@@ -186,6 +181,7 @@ public class SecurityConfig {
                 .redirectUri("http://127.0.0.1:4200/auth/callback")
                 .clientAuthenticationMethod(ClientAuthenticationMethod.NONE)
                 .clientSettings(ClientSettings.builder().requireProofKey(true).requireAuthorizationConsent(true).build())
+                .tokenSettings(TokenSettings.builder().accessTokenTimeToLive(Duration.of(1, ChronoUnit.HOURS)).build())
                 .build();
 
         return new InMemoryRegisteredClientRepository(publicClient);
