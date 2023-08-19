@@ -1,8 +1,9 @@
-package com.example.demo.config;
+package com.example.uaa.config;
 
-import com.example.demo.security.FederatedIdentityAuthenticationSuccessHandler;
-import com.example.demo.security.FederatedIdentityIdTokenCustomizer;
-import com.example.demo.security.UserRepositoryOAuth2UserHandler;
+import com.example.uaa.security.FederatedIdentityAuthenticationSuccessHandler;
+import com.example.uaa.security.FederatedIdentityIdTokenCustomizer;
+import com.example.uaa.security.UserRepositoryOAuth2UserHandler;
+import com.example.uaa.service.OidcUserInfoService;
 import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.jwk.source.ImmutableJWKSet;
@@ -47,7 +48,6 @@ import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
-import java.time.temporal.TemporalUnit;
 import java.util.UUID;
 
 /**
@@ -64,10 +64,12 @@ import java.util.UUID;
 @EnableWebSecurity
 public class SecurityConfig {
 
+    private final OidcUserInfoService oidcUserInfoService;
     private final FederatedIdentityAuthenticationSuccessHandler authenticationSuccessHandler;
     private final UserRepositoryOAuth2UserHandler userRepositoryOAuth2UserHandler;
 
-    public SecurityConfig(FederatedIdentityAuthenticationSuccessHandler authenticationSuccessHandler, UserRepositoryOAuth2UserHandler userRepositoryOAuth2UserHandler) {
+    public SecurityConfig(OidcUserInfoService oidcUserInfoService, FederatedIdentityAuthenticationSuccessHandler authenticationSuccessHandler, UserRepositoryOAuth2UserHandler userRepositoryOAuth2UserHandler) {
+        this.oidcUserInfoService = oidcUserInfoService;
         this.authenticationSuccessHandler = authenticationSuccessHandler;
         this.userRepositoryOAuth2UserHandler = userRepositoryOAuth2UserHandler;
     }
@@ -79,7 +81,7 @@ public class SecurityConfig {
      */
     @Bean
     public OAuth2TokenCustomizer<JwtEncodingContext> idTokenCustomizer() {
-        return new FederatedIdentityIdTokenCustomizer();
+        return new FederatedIdentityIdTokenCustomizer(oidcUserInfoService);
     }
 
     // region 社交登录配置
