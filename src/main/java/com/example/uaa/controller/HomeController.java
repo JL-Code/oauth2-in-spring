@@ -15,8 +15,8 @@ import java.util.Map;
 @RestController
 public class HomeController {
     @GetMapping("/")
-    public Map<String, Object> home(@AuthenticationPrincipal OAuth2User user) {
-        return user.getAttributes();
+    public String home() {
+        return "home";
     }
 
 }

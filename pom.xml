@@ -53,6 +53,11 @@
             <scope>test</scope>
         </dependency>
 
+        <!--   html 模板引擎  -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-thymeleaf</artifactId>
+        </dependency>
         <!--  数据持久化  -->
         <dependency>
             <groupId>com.mysql</groupId>

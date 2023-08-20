@@ -13,18 +13,20 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
-import org.springframework.security.core.userdetails.User;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.security.oauth2.core.ClientAuthenticationMethod;
 import org.springframework.security.oauth2.core.oidc.OidcScopes;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
-import org.springframework.security.oauth2.server.authorization.client.InMemoryRegisteredClientRepository;
+import org.springframework.security.oauth2.server.authorization.client.JdbcRegisteredClientRepository;
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClient;
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClientRepository;
 import org.springframework.security.oauth2.server.authorization.config.annotation.web.configuration.OAuth2AuthorizationServerConfiguration;
@@ -34,7 +36,6 @@ import org.springframework.security.oauth2.server.authorization.settings.ClientS
 import org.springframework.security.oauth2.server.authorization.settings.TokenSettings;
 import org.springframework.security.oauth2.server.authorization.token.JwtEncodingContext;
 import org.springframework.security.oauth2.server.authorization.token.OAuth2TokenCustomizer;
-import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
 import org.springframework.security.web.util.matcher.MediaTypeRequestMatcher;
@@ -64,11 +65,18 @@ import java.util.UUID;
 @EnableWebSecurity
 public class SecurityConfig {
 
+    private final JdbcTemplate jdbcTemplate;
+    private final UserDetailsService userDetailsService;
     private final OidcUserInfoService oidcUserInfoService;
     private final FederatedIdentityAuthenticationSuccessHandler authenticationSuccessHandler;
     private final UserRepositoryOAuth2UserHandler userRepositoryOAuth2UserHandler;
 
-    public SecurityConfig(OidcUserInfoService oidcUserInfoService, FederatedIdentityAuthenticationSuccessHandler authenticationSuccessHandler, UserRepositoryOAuth2UserHandler userRepositoryOAuth2UserHandler) {
+    public SecurityConfig(JdbcTemplate jdbcTemplate,
+                          UserDetailsService userDetailsService, OidcUserInfoService oidcUserInfoService,
+                          FederatedIdentityAuthenticationSuccessHandler authenticationSuccessHandler,
+                          UserRepositoryOAuth2UserHandler userRepositoryOAuth2UserHandler) {
+        this.jdbcTemplate = jdbcTemplate;
+        this.userDetailsService = userDetailsService;
         this.oidcUserInfoService = oidcUserInfoService;
         this.authenticationSuccessHandler = authenticationSuccessHandler;
         this.userRepositoryOAuth2UserHandler = userRepositoryOAuth2UserHandler;
@@ -98,6 +106,12 @@ public class SecurityConfig {
         return source;
     }
 
+    // 密码加密器
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+
 
     @Bean
     @Order(1)
@@ -108,8 +122,9 @@ public class SecurityConfig {
         http.getConfigurer(OAuth2AuthorizationServerConfigurer.class)
                 // Enable OpenID Connect 1.0
                 .oidc(Customizer.withDefaults());
-        http.cors(Customizer.withDefaults());
-        http
+//                .tokenGenerator();
+        http.cors(Customizer.withDefaults())
+                .userDetailsService(userDetailsService)
                 // Redirect to the login page when not authenticated from the
                 // authorization endpoint
                 .exceptionHandling((exceptions) -> exceptions
@@ -130,43 +145,62 @@ public class SecurityConfig {
             throws Exception {
         http
                 .authorizeHttpRequests((authorize) -> authorize
+                        .requestMatchers("/error").permitAll()
                         .anyRequest().authenticated()
                 )
+                // 开启跨域访问
+                .cors(Customizer.withDefaults())
                 // OAuth2 Login handles the redirect to the OAuth 2.0 Login endpoint
                 // from the authorization server filter chain
-                .formLogin(Customizer.withDefaults())
-                .cors(Customizer.withDefaults())
+                .formLogin(formLogin -> {
+                    formLogin.loginPage("/login")
+                            .permitAll();
+                })
                 .oauth2Login(oauth2Login -> {
+                    // 设置自定义登录页面（设置后默认生成登录及退出页面的过滤器将不会被添加到 Filters 中。）
+                    oauth2Login.loginPage("/login");
                     // 认证成功后回调处理，eg：保存第一次登录的用户信息。
                     authenticationSuccessHandler.setOAuth2UserHandler(userRepositoryOAuth2UserHandler);
                     oauth2Login.successHandler(authenticationSuccessHandler);
                 })
                 .oauth2ResourceServer(oauth2ResourceServer -> {
-                    // Add BearerTokenAuthenticationFilter
+                    // Add BearerTokenAuthenticationFilter 支持从 JWT 中恢复认证信息。
                     oauth2ResourceServer.jwt(Customizer.withDefaults());
                 });
-        http.csrf(AbstractHttpConfigurer::disable);
-
         return http.build();
+    }
+
+    /**
+     * Web Security 自定义器
+     */
+    @Bean
+    WebSecurityCustomizer webSecurityCustomizer() {
+        return (web) ->
+                web.debug(false)
+                        .ignoring()
+                        .requestMatchers("/webjars/**", "/images/**", "/css/**", "/assets/**", "/favicon.ico");
+
     }
 
     // endregion
 
-    /**
-     * An instance of UserDetailsService for retrieving users to authenticate.
-     */
-    @Bean
-    public UserDetailsService userDetailsService() {
-        UserDetails userDetails = User.withDefaultPasswordEncoder()
-                .username("user1")
-                .password("password")
-                .roles("USER")
-                .build();
+//    /**
+//     * 用户信息服务
+//     * An instance of UserDetailsService for retrieving users to authenticate.
+//     */
+//    @Bean
+//    public UserDetailsService userDetailsService() {
+//        UserDetails userDetails = User.withDefaultPasswordEncoder()
+//                .username("user1")
+//                .password("password")
+//                .roles("USER")
+//                .build();
+//
+//        return new InMemoryUserDetailsManager(userDetails);
+//    }
 
-        return new InMemoryUserDetailsManager(userDetails);
-    }
-
     /**
+     * OAuth2 Client 仓库
      * An instance of RegisteredClientRepository for managing clients.
      */
     @Bean
@@ -185,8 +219,14 @@ public class SecurityConfig {
                 .clientSettings(ClientSettings.builder().requireProofKey(true).requireAuthorizationConsent(true).build())
                 .tokenSettings(TokenSettings.builder().accessTokenTimeToLive(Duration.of(1, ChronoUnit.HOURS)).build())
                 .build();
-
-        return new InMemoryRegisteredClientRepository(publicClient);
+//
+//        return new InMemoryRegisteredClientRepository(publicClient);
+        // 使用 JDBC
+        var repo = new JdbcRegisteredClientRepository(jdbcTemplate);
+        if (repo.findByClientId("public-client") == null) {
+            repo.save(publicClient);
+        }
+        return repo;
     }
 
     /**
