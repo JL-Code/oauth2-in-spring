@@ -1,4 +1,6 @@
 spring:
+  profiles:
+    active: dev
   security:
     oauth2:
       authorizationserver:
@@ -62,9 +64,9 @@ spring:
             jwk-set-uri: https://www.googleapis.com/oauth2/v3/certs
             user-name-attribute: sub
   datasource:
-    url: jdbc:mysql://127.0.0.1:3306/oauth2?serverTimezone=GMT%2B8&useSSL=false&useUnicode=true&characterEncoding=utf-8&allowPublicKeyRetrieval=true&useAffectedRows=true
+    url: jdbc:mysql://127.0.0.1:3306/oauth2-db?serverTimezone=GMT%2B8&useSSL=false&useUnicode=true&characterEncoding=utf-8&allowPublicKeyRetrieval=true&useAffectedRows=true
     username: root
-    password: 12345678
+    password: 12345678 #Jiang.252681
     driver-class-name: com.mysql.cj.jdbc.Driver
 server:
   port: 9000

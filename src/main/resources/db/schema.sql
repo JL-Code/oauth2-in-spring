@@ -1,3 +1,5 @@
+create schema `oauth2-db` collate utf8mb4_bin;
+
 CREATE TABLE `sys_account`
 (
     `id`                         bigint(20) NOT NULL COMMENT '账号ID',
