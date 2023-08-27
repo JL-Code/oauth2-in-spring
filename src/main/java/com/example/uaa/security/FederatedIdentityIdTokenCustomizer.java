@@ -62,17 +62,14 @@ public final class FederatedIdentityIdTokenCustomizer implements OAuth2TokenCust
                 // Remove conflicting claims set by this authorization server
                 // 删除此授权服务器设置的冲突声明
                 existingClaims.keySet().forEach(thirdPartyClaims::remove);
-
                 // Remove standard id_token claims that could cause problems with clients
                 // 删除可能导致客户端出现问题的标准id_token声明
                 ID_TOKEN_CLAIMS.forEach(thirdPartyClaims::remove);
-
                 // Add all other claims directly to id_token
                 // 将所有其他声明直接添加到id_token
 //                existingClaims.putAll(thirdPartyClaims);
             });
         } else if ("access_token".equals(context.getTokenType().getValue())) {
-            //
             Map<String, Object> thirdPartyClaims = extractClaims(context.getPrincipal());
             log.info("thirdPartyClaims: {}", thirdPartyClaims);
         }

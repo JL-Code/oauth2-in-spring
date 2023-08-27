@@ -49,6 +49,7 @@ import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -94,13 +95,18 @@ public class SecurityConfig {
 
     // region 社交登录配置
 
+    /**
+     * 跨域设置
+     *
+     * @return
+     */
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         CorsConfiguration config = new CorsConfiguration();
         config.addAllowedHeader("*");
         config.addAllowedMethod("*");
-        config.addAllowedOrigin("http://127.0.0.1:4200");
+        config.addAllowedOrigin("http://localhost:4200");
         config.setAllowCredentials(true);
         source.registerCorsConfiguration("/**", config);
         return source;
@@ -111,7 +117,6 @@ public class SecurityConfig {
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
-
 
     @Bean
     @Order(1)
@@ -127,11 +132,13 @@ public class SecurityConfig {
                 .userDetailsService(userDetailsService)
                 // Redirect to the login page when not authenticated from the
                 // authorization endpoint
-                .exceptionHandling((exceptions) -> exceptions
-                        .defaultAuthenticationEntryPointFor(
-                                new LoginUrlAuthenticationEntryPoint("/login"),
-                                new MediaTypeRequestMatcher(MediaType.TEXT_HTML)
-                        )
+                .exceptionHandling(exceptions -> {
+                            exceptions
+                                    .defaultAuthenticationEntryPointFor(
+                                            new LoginUrlAuthenticationEntryPoint("/login"),
+                                            new MediaTypeRequestMatcher(MediaType.TEXT_HTML)
+                                    ).accessDeniedPage("/unauthorized");
+                        }
                 )
                 // Accept access tokens for User Info and/or Client Registration
                 .oauth2ResourceServer((oauth2) -> oauth2.jwt(Customizer.withDefaults()));
@@ -150,6 +157,7 @@ public class SecurityConfig {
                 )
                 // 开启跨域访问
                 .cors(Customizer.withDefaults())
+                .csrf(AbstractHttpConfigurer::disable)
                 // OAuth2 Login handles the redirect to the OAuth 2.0 Login endpoint
                 // from the authorization server filter chain
                 .formLogin(formLogin -> {
@@ -173,14 +181,14 @@ public class SecurityConfig {
     /**
      * Web Security 自定义器
      */
-    @Bean
-    WebSecurityCustomizer webSecurityCustomizer() {
-        return (web) ->
-                web.debug(false)
-                        .ignoring()
-                        .requestMatchers("/webjars/**", "/images/**", "/css/**", "/assets/**", "/favicon.ico");
-
-    }
+//    @Bean
+//    WebSecurityCustomizer webSecurityCustomizer() {
+//        return (web) ->
+//                web.debug(false)
+//                        .ignoring()
+//                        .requestMatchers("/webjars/**", "/images/**", "/css/**", "/assets/**", "/favicon.ico");
+//
+//    }
 
     // endregion
 
@@ -212,9 +220,9 @@ public class SecurityConfig {
                 .authorizationGrantType(AuthorizationGrantType.CLIENT_CREDENTIALS)
                 .scope(OidcScopes.OPENID)
                 .scope(OidcScopes.PROFILE)
-                .postLogoutRedirectUri("http://127.0.0.1:4200")
-                .redirectUri("http://127.0.0.1:4200")
-                .redirectUri("http://127.0.0.1:4200/auth/callback")
+                .postLogoutRedirectUri("http://localhost:4200")
+                .redirectUri("http://localocalhostlhost:4200")
+                .redirectUri("http://localhost:4200/auth/callback")
                 .clientAuthenticationMethod(ClientAuthenticationMethod.NONE)
                 .clientSettings(ClientSettings.builder().requireProofKey(true).requireAuthorizationConsent(true).build())
                 .tokenSettings(TokenSettings.builder().accessTokenTimeToLive(Duration.of(1, ChronoUnit.HOURS)).build())
