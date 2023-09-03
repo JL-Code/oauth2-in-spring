@@ -18,6 +18,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -47,6 +48,7 @@ import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -92,6 +94,11 @@ public class SecurityConfig {
 
     // region 社交登录配置
 
+    /**
+     * 跨域设置
+     *
+     * @return
+     */
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
@@ -111,7 +118,6 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
-
     @Bean
     @Order(1)
     public SecurityFilterChain authorizationServerSecurityFilterChain(HttpSecurity http)
@@ -129,7 +135,7 @@ public class SecurityConfig {
                         .defaultAuthenticationEntryPointFor(
                                 new CustomAuthenticationEntryPoint("/custom-login"),
                                 new MediaTypeRequestMatcher(MediaType.TEXT_HTML)
-                        )
+                        ).accessDeniedPage("/unauthorized")
                 )
                 // Accept access tokens for User Info and/or Client Registration
                 .oauth2ResourceServer((oauth2) -> oauth2.jwt(Customizer.withDefaults()));
@@ -150,6 +156,7 @@ public class SecurityConfig {
                 )
                 // 开启跨域访问
                 .cors(Customizer.withDefaults())
+                .csrf(AbstractHttpConfigurer::disable)
                 // OAuth2 Login handles the redirect to the OAuth 2.0 Login endpoint
                 // from the authorization server filter chain
                 .formLogin(formLogin -> {

@@ -20,7 +20,8 @@ public class OidcUserInfoServiceImpl implements OidcUserInfoService {
     @Override
     public OidcUserInfo loadUser(String username) {
         Account account = accountService.findByName(username);
-        var userinfo= OidcUserInfo.builder()
+        // TODO: 用户账单信息，单独接口获取还是在获取用户信息的时候获取？
+        var userinfo = OidcUserInfo.builder()
                 .email(account.getEmail())
                 .name(account.getUsername())
                 .subject(account.getId())
@@ -28,7 +29,7 @@ public class OidcUserInfoServiceImpl implements OidcUserInfoService {
                 .picture(account.getAvatar())
                 .build();
 
-        log.info("oidc userinfo: {}",userinfo);
+        log.info("oidc userinfo: {}", userinfo);
         return userinfo;
     }
 }
