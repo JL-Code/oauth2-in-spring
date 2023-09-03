@@ -1,5 +1,6 @@
 package com.example.uaa.config;
 
+import com.example.uaa.security.CustomAuthenticationEntryPoint;
 import com.example.uaa.security.FederatedIdentityAuthenticationSuccessHandler;
 import com.example.uaa.security.FederatedIdentityIdTokenCustomizer;
 import com.example.uaa.security.UserRepositoryOAuth2UserHandler;
@@ -17,8 +18,6 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer;
-import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -37,7 +36,6 @@ import org.springframework.security.oauth2.server.authorization.settings.TokenSe
 import org.springframework.security.oauth2.server.authorization.token.JwtEncodingContext;
 import org.springframework.security.oauth2.server.authorization.token.OAuth2TokenCustomizer;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
 import org.springframework.security.web.util.matcher.MediaTypeRequestMatcher;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
@@ -101,6 +99,7 @@ public class SecurityConfig {
         config.addAllowedHeader("*");
         config.addAllowedMethod("*");
         config.addAllowedOrigin("http://127.0.0.1:4200");
+        config.addAllowedOrigin("http://localhost:4200");
         config.setAllowCredentials(true);
         source.registerCorsConfiguration("/**", config);
         return source;
@@ -129,7 +128,7 @@ public class SecurityConfig {
                 // authorization endpoint
                 .exceptionHandling((exceptions) -> exceptions
                         .defaultAuthenticationEntryPointFor(
-                                new LoginUrlAuthenticationEntryPoint("/login"),
+                                new CustomAuthenticationEntryPoint("/custom-login"),
                                 new MediaTypeRequestMatcher(MediaType.TEXT_HTML)
                         )
                 )
@@ -157,7 +156,7 @@ public class SecurityConfig {
                             .permitAll();
                 })
                 .oauth2Login(oauth2Login -> {
-                    // 设置自定义登录页面（设置后默认生成登录及退出页面的过滤器将不会被添加到 Filters 中。）
+                    // 设置自定义登录页面（设置后,默认生成的登录及退出页面的过滤器将不会被添加到 Filters 中。）
                     oauth2Login.loginPage("/login");
                     // 认证成功后回调处理，eg：保存第一次登录的用户信息。
                     authenticationSuccessHandler.setOAuth2UserHandler(userRepositoryOAuth2UserHandler);
@@ -173,14 +172,14 @@ public class SecurityConfig {
     /**
      * Web Security 自定义器
      */
-    @Bean
-    WebSecurityCustomizer webSecurityCustomizer() {
-        return (web) ->
-                web.debug(false)
-                        .ignoring()
-                        .requestMatchers("/webjars/**", "/images/**", "/css/**", "/assets/**", "/favicon.ico");
-
-    }
+//    @Bean
+//    WebSecurityCustomizer webSecurityCustomizer() {
+//        return (web) ->
+//                web.debug(false)
+//                        .ignoring()
+//                        .requestMatchers("/webjars/**", "/images/**", "/css/**", "/assets/**", "/favicon.ico");
+//
+//    }
 
     // endregion
 
@@ -213,8 +212,11 @@ public class SecurityConfig {
                 .scope(OidcScopes.OPENID)
                 .scope(OidcScopes.PROFILE)
                 .postLogoutRedirectUri("http://127.0.0.1:4200")
+                .postLogoutRedirectUri("http://localhost:4200")
                 .redirectUri("http://127.0.0.1:4200")
+                .redirectUri("http://localhost:4200")
                 .redirectUri("http://127.0.0.1:4200/auth/callback")
+                .redirectUri("http://localhost:4200/auth/callback")
                 .clientAuthenticationMethod(ClientAuthenticationMethod.NONE)
                 .clientSettings(ClientSettings.builder().requireProofKey(true).requireAuthorizationConsent(true).build())
                 .tokenSettings(TokenSettings.builder().accessTokenTimeToLive(Duration.of(1, ChronoUnit.HOURS)).build())

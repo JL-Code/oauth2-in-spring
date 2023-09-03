@@ -3,38 +3,6 @@ spring:
     active: dev
   security:
     oauth2:
-      authorizationserver:
-        client:
-          oidc-client:
-            registration:
-              client-id: "oidc-client"
-              client-secret: "{noop}secret"
-              client-authentication-methods:
-                - "client_secret_basic"
-              authorization-grant-types:
-                - "authorization_code"
-                - "refresh_token"
-              redirect-uris:
-                - "http://127.0.0.1:9000/login/oauth2/code/oidc-client"
-              post-logout-redirect-uris:
-                - "http://127.0.0.1:8080/"
-              scopes:
-                - "openid"
-                - "profile"
-            require-authorization-consent: true
-          public-client:
-            registration:
-              client-id: "public-client"
-              client-secret: "{noop}secret"
-              client-authentication-methods:
-                - "client_secret_basic"
-              authorization-grant-types:
-                - "client_credentials"
-              scopes:
-                - "openid"
-                - "profile"
-            require-authorization-consent: true
-            require-proof-key: true
       client:
         registration:
           google:
@@ -63,11 +31,6 @@ spring:
             user-info-uri: https://openidconnect.googleapis.com/v1/userinfo
             jwk-set-uri: https://www.googleapis.com/oauth2/v3/certs
             user-name-attribute: sub
-  datasource:
-    url: jdbc:mysql://127.0.0.1:3306/oauth2-db?serverTimezone=GMT%2B8&useSSL=false&useUnicode=true&characterEncoding=utf-8&allowPublicKeyRetrieval=true&useAffectedRows=true
-    username: root
-    password: 12345678 #Jiang.252681
-    driver-class-name: com.mysql.cj.jdbc.Driver
 server:
   port: 9000
 logging:
