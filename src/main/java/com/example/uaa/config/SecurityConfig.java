@@ -121,7 +121,6 @@ public class SecurityConfig {
         http.getConfigurer(OAuth2AuthorizationServerConfigurer.class)
                 // Enable OpenID Connect 1.0
                 .oidc(Customizer.withDefaults());
-//                .tokenGenerator();
         http.cors(Customizer.withDefaults())
                 .userDetailsService(userDetailsService)
                 // Redirect to the login page when not authenticated from the
@@ -144,20 +143,23 @@ public class SecurityConfig {
             throws Exception {
         http
                 .authorizeHttpRequests((authorize) -> authorize
-                        .requestMatchers("/error").permitAll()
-                        .anyRequest().authenticated()
+                        .requestMatchers("/error", "/custom-login")
+                        .permitAll()
+                        .anyRequest()
+                        .authenticated()
                 )
                 // 开启跨域访问
                 .cors(Customizer.withDefaults())
                 // OAuth2 Login handles the redirect to the OAuth 2.0 Login endpoint
                 // from the authorization server filter chain
                 .formLogin(formLogin -> {
-                    formLogin.loginPage("/login")
+                    formLogin.loginPage("/custom-login")
                             .permitAll();
                 })
                 .oauth2Login(oauth2Login -> {
                     // 设置自定义登录页面（设置后,默认生成的登录及退出页面的过滤器将不会被添加到 Filters 中。）
-                    oauth2Login.loginPage("/login");
+                    oauth2Login.loginPage("/custom-login")
+                            .permitAll();
                     // 认证成功后回调处理，eg：保存第一次登录的用户信息。
                     authenticationSuccessHandler.setOAuth2UserHandler(userRepositoryOAuth2UserHandler);
                     oauth2Login.successHandler(authenticationSuccessHandler);
